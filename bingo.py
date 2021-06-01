@@ -62,7 +62,7 @@ for card in cards:
 
     # sort seqs into rows of no more than 5 numbers
     for s in [3, 2, 1]:
-        fcols = list(filter(lambda n: len(n['vals']) == s, card))
+        fcols = [c for c in card if len(c['vals']) == s]
         for col in fcols:
             # loop over each value and assign to a row
             r = random.randrange(3)
