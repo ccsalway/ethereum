@@ -1,5 +1,7 @@
 import random
 
+page = []
+
 # there is an edge case where a card isnt filled out and hits the iterative limit
 while 1:
 
@@ -15,10 +17,10 @@ while 1:
         list(range(81, 90 + 1))
     ]
 
-    cards = [[{'col': c, 'vals': []} for c in range(9)] for _ in range(6)]
+    cols = [[{'col': c, 'vals': []} for c in range(9)] for _ in range(6)]
 
-    # add at least one number to each column
-    for card in cards:
+    # add at least one number to each column in each card
+    for card in cols:
         for c in range(len(card)):
             # randomly select a number
             n = random.choice(seqs[c])
@@ -31,7 +33,7 @@ while 1:
     limit = 0
     while limit < 1000:
         # ensure no card has more than 15 numbers
-        unfilled = [card for card in cards if sum([len(col['vals']) for col in card]) < 15]
+        unfilled = [card for card in cols if sum([len(col['vals']) for col in card]) < 15]
         for card in unfilled:
             # filter out sequences with no values
             avail = [(idx, vals) for idx, vals in enumerate(seqs) if len(vals) > 0]
@@ -56,10 +58,9 @@ while 1:
         break
 
 # organise columns into rows
-for card in cards:
-
+for card in cols:
     rows = [[' ' for _ in range(9)] for _ in range(3)]
-
+    
     # sort seqs into rows of no more than 5 numbers
     for s in [3, 2, 1]:
         fcols = [c for c in card if len(c['vals']) == s]
@@ -75,8 +76,10 @@ for card in cards:
                 # add value to row,column
                 rows[r][col['col']] = col['vals'][i]
 
-    # print rows
-    for row in rows:
+    page.append(rows)
+
+# print cards
+for card in page:
+    for row in card:
         print(row)
-    
     print(' ' * 20)
