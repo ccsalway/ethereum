@@ -4,7 +4,7 @@ colcounter = [0 for _ in range(9)]
 
 
 def add_column_count(row):
-    for c in range(len(row)):
+    for c in range(9):
         colcounter[c] += row[c]
 
 
