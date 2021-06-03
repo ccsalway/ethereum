@@ -8,12 +8,12 @@ contract Bingo {
     uint256 public ticketPrice;
 
     struct Ticket {
-        uint8[27] numbers; // ticket is 3 rows by 9 numbers = 27 numbers
+        uint8[27] numbers; // ticket is 3 rows of 9 numbers = 27 numbers
     }
 
-    mapping(address => Ticket[]) players;
+    mapping(address => Ticket[]) tickets;
 
-    event NewPlayer(address player, uint8[27] ticket);
+    event NewTicket(address player, uint8[27] numbers);
 
     constructor(uint256 ticketPriceWei) {
         host = msg.sender;
@@ -31,22 +31,22 @@ contract Bingo {
     }
 
     function getTickets(address player) public view returns (Ticket[] memory) {
-        return players[player];
+        return tickets[player];
     }
 
-    function buyTicket(uint8[27] memory ticket) payable public {
+    function buyTicket(uint8[27] memory numbers) payable public {
         require(enabled, "Game is disabled");
         require(msg.value >= ticketPrice, "Insufficient payment");
 
-        players[msg.sender].push(Ticket(ticket));
+        tickets[msg.sender].push(Ticket(numbers));
 
         // refund overpayment
         uint256 refund = msg.value - ticketPrice;
         (bool success, ) = msg.sender.call{value: refund}("");
         require(success, "Refund failed");
        
-        // host can watch for this event to be informed of new players
-        emit NewPlayer(msg.sender, ticket);
+        // host can watch for this event to be informed of new tickets purchased
+        emit NewTicket(msg.sender, numbers);
     }
 
     function payout(address player, uint256 amountWei) public {
