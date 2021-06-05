@@ -25,19 +25,19 @@ contract Bingo {
         _;
     }
 
-    function toggleEnabled() public onlyHost {
+    function toggleEnabled() external onlyHost {
         enabled = enabled ? false : true;
     }
 
-    function getBalance() public onlyHost view returns (uint256) {
+    function getBalance() external onlyHost view returns (uint256) {
         return address(this).balance;
     }
 
-    function getTickets(address player) public onlyHost view returns (uint8[] memory) {
+    function getTickets(address player) external onlyHost view returns (uint8[] memory) {
         return tickets[player];
     }
 
-    function buyTickets(uint8[] memory _numbers) public payable {
+    function buyTickets(uint8[] memory _numbers) external payable {
         require(enabled, "Game is disabled");
         require(_numbers.length % 27 == 0, "Invalid ticket length");
 
@@ -63,19 +63,19 @@ contract Bingo {
         emit NewPurchase(msg.sender, _numbers);
     }
 
-    function payout(address _player, uint256 _amountWei) public onlyHost {
+    function payout(address _player, uint256 _amountWei) external onlyHost {
         require(address(this).balance >= _amountWei, "Not enough balance");
 
         (bool success, ) = _player.call{value: _amountWei}("");
         require(success, "Payout failed");
     }
 
-    function withdrawBalance() public onlyHost {
+    function withdrawBalance() external onlyHost {
         (bool success, ) = host.call{value: address(this).balance}("");
         require(success, "Withdraw failed");
     }
 
-    function cancelGame() public onlyHost {
+    function cancelGame() external onlyHost {
         for (uint i = players.length - 1; i >= 0; i--) {
             address _player = players[i];
             uint8[] memory _tickets = tickets[_player];
