@@ -4,99 +4,90 @@ pragma solidity ^0.8.4;
 
 contract Bingo {
     address public host;
-    bool public enabled;
     uint256 public ticketPrice;
-    
+    bool public enabled;
+
     address[] private players;
     uint256 public ticketCount;
 
-    struct Ticket {
-        uint8[27] numbers; // ticket is 3 rows of 9 numbers = 27 numbers
-        uint256 paid;
-    }
+    mapping(address => uint8[]) tickets;  // players => numbers[]
 
-    mapping(address => Ticket[]) tickets;
-
-    event NewTicket(address player, uint8[27] numbers);
+    event NewPurchase(address player, uint8[] numbers);
 
     constructor(uint256 _ticketPriceWei) {
         host = msg.sender;
-        enabled = true;
         ticketPrice = _ticketPriceWei;
+        enabled = true;
     }
 
-    function switchOnOff() public {
+    modifier onlyHost {
         require(msg.sender == host, "Caller is not host");
-      
+        _;
+    }
+
+    function toggleEnabled() public onlyHost {
         enabled = enabled ? false : true;
     }
 
-    function getBalance() public view returns (uint256) {
+    function getBalance() public onlyHost view returns (uint256) {
         return address(this).balance;
     }
 
-    function getTickets(address player) public view returns (Ticket[] memory) {
+    function getTickets(address player) public onlyHost view returns (uint8[] memory) {
         return tickets[player];
     }
 
-    function cancelGame() public {
-      require(msg.sender == host, "Caller is not host");
-      
-      for (uint i=0; i<players.length; i++) {
-        address _player = players[i];
-        Ticket[] _tickets = tickets[player];
-        
-        uint refund = 0;
-        for (uint i=0; i<_tickets.length; i++) {
-          refund += _tickets[i].paid;
-        }
-   
-        (bool success, ) = address.call{value: refund}("");
-        if (success) {
-          delete tickets[player];
-          delete players[i];
-          tickerCount -= _tickets.length;
-        }
-      }
-      
-      enabled = false;
-    }
-
-    function buyTickets(uint8[] memory _numbers) payable public {
+    function buyTickets(uint8[] memory _numbers) public payable {
         require(enabled, "Game is disabled");
-        require(msg.value >= ticketPrice, "Insufficient payment");
         require(_numbers.length % 27 == 0, "Invalid ticket length");
-        
-        if (tickets[msg.sender].length == 0)
-          players.append(msg.sender);
-        
-        for (uint i=0; i=_numbers.length%27; i++) {
-          uint8[27] _ticket = _numbers[i:i*27+27];
-          tickets[msg.sender].push(Ticket(_ticket, ticketPrice));
-          ticketCount+=1;
-        }
 
-        // refund overpayment
-        uint256 refund = msg.value - ticketPrice;
-        (bool success, ) = msg.sender.call{value: refund}("");
+        // check enough funds have been transferred in
+        uint256 _ticketCount = _numbers.length % 27;
+        uint256 _cost = ticketPrice * _ticketCount;
+        require(msg.value >= _cost, "Insufficient payment");
+
+        // add tickets to senders address
+        for (uint n = 0; n < _numbers.length; n++)
+            tickets[msg.sender].push(_numbers[n]);
+        ticketCount += _ticketCount;
+
+        // ensure player is listed
+        if (tickets[msg.sender].length == 0) 
+            players.push(msg.sender);
+
+        // return any over payment
+        (bool success, ) = msg.sender.call{value: msg.value - _cost}("");
         require(success, "Refund failed");
-       
+
         // host can watch for this event to be informed of new tickets purchased
-        emit NewTicket(msg.sender, _numbers);
+        emit NewPurchase(msg.sender, _numbers);
     }
 
-    function payout(address _player, uint256 _amountWei) public {
-        require(msg.sender == host, "Caller is not host");
+    function payout(address _player, uint256 _amountWei) public onlyHost {
         require(address(this).balance >= _amountWei, "Not enough balance");
-        
+
         (bool success, ) = _player.call{value: _amountWei}("");
         require(success, "Payout failed");
     }
 
-    function withdrawBalance() public {
-        require(msg.sender == host, "Caller is not host");
-        
+    function withdrawBalance() public onlyHost {
         (bool success, ) = host.call{value: address(this).balance}("");
         require(success, "Withdraw failed");
+    }
+
+    function cancelGame() public onlyHost {
+        for (uint i = players.length - 1; i >= 0; i--) {
+            address _player = players[i];
+            uint8[] memory _tickets = tickets[_player];
+
+            uint256 _ticketCount = _tickets.length % 27;
+            (bool success, ) = _player.call{value: _ticketCount * ticketPrice}("");
+            require(success, "Refund failed");
+
+            delete players[i];
+            delete tickets[_player];
+        }
+        ticketCount = 0;
+        enabled = false;
     }
 }
